@@ -111,19 +111,19 @@ public class FrameLayoutWithHole extends FrameLayout {
         if (mOverlay !=null && mOverlay.mStyle == Overlay.Style.ROUNDED_RECTANGLE) {
             int recfFPaddingPx = (int) (mOverlay.mPaddingDp * mDensity);
             mRectF = new RectF(mPos[0] - recfFPaddingPx + mOverlay.mHoleOffsetLeft,
-                    mPos[1] - recfFPaddingPx + mOverlay.mHoleOffsetTop,
-                    mPos[0] + mViewHole.getWidth() + recfFPaddingPx + mOverlay.mHoleOffsetLeft,
-                    mPos[1] + mViewHole.getHeight() + recfFPaddingPx + mOverlay.mHoleOffsetTop);
+                mPos[1] - recfFPaddingPx + mOverlay.mHoleOffsetTop,
+                mPos[0] + mViewHole.getWidth() + recfFPaddingPx + mOverlay.mHoleOffsetLeft,
+                mPos[1] + mViewHole.getHeight() + recfFPaddingPx + mOverlay.mHoleOffsetTop);
         }
     }
 
     private void init(AttributeSet attrs, int defStyle) {
         // Load attributes
-//        final TypedArray a = getContext().obtainStyledAttributes(
-//                attrs, FrameLayoutWithHole, defStyle, 0);
-//
-//
-//        a.recycle();
+        //        final TypedArray a = getContext().obtainStyledAttributes(
+        //                attrs, FrameLayoutWithHole, defStyle, 0);
+        //
+        //
+        //        a.recycle();
         setWillNotDraw(false);
         // Set up a default TextPaint object
         mTextPaint = new TextPaint();
@@ -209,15 +209,15 @@ public class FrameLayoutWithHole extends FrameLayout {
      */
     private static void dumpEvent(MotionEvent event) {
         String[] names = {"DOWN", "UP", "MOVE", "CANCEL", "OUTSIDE",
-                "POINTER_DOWN", "POINTER_UP", "7?", "8?", "9?"};
+            "POINTER_DOWN", "POINTER_UP", "7?", "8?", "9?"};
         StringBuilder sb = new StringBuilder();
         int action = event.getAction();
         int actionCode = action & MotionEvent.ACTION_MASK;
         sb.append("event ACTION_").append(names[actionCode]);
         if (actionCode == MotionEvent.ACTION_POINTER_DOWN
-                || actionCode == MotionEvent.ACTION_POINTER_UP) {
+            || actionCode == MotionEvent.ACTION_POINTER_UP) {
             sb.append("(pid ").append(
-                    action >> MotionEvent.ACTION_POINTER_ID_SHIFT);
+                action >> MotionEvent.ACTION_POINTER_ID_SHIFT);
             sb.append(")");
         }
         sb.append("[");
@@ -236,24 +236,24 @@ public class FrameLayoutWithHole extends FrameLayout {
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         //first check if the location button should handle the touch event
-//        dumpEvent(ev);
-//        int action = MotionEventCompat.getActionMasked(ev);
+        //        dumpEvent(ev);
+        //        int action = MotionEventCompat.getActionMasked(ev);
         if (mViewHole != null) {
 
-//            Log.d("tourguide", "[dispatchTouchEvent] mViewHole.getHeight(): "+mViewHole.getHeight());
-//            Log.d("tourguide", "[dispatchTouchEvent] mViewHole.getWidth(): "+mViewHole.getWidth());
-//
-//            Log.d("tourguide", "[dispatchTouchEvent] Touch X(): "+ev.getRawX());
-//            Log.d("tourguide", "[dispatchTouchEvent] Touch Y(): "+ev.getRawY());
+            //            Log.d("tourguide", "[dispatchTouchEvent] mViewHole.getHeight(): "+mViewHole.getHeight());
+            //            Log.d("tourguide", "[dispatchTouchEvent] mViewHole.getWidth(): "+mViewHole.getWidth());
+            //
+            //            Log.d("tourguide", "[dispatchTouchEvent] Touch X(): "+ev.getRawX());
+            //            Log.d("tourguide", "[dispatchTouchEvent] Touch Y(): "+ev.getRawY());
 
-//            Log.d("tourguide", "[dispatchTouchEvent] X of image: "+pos[0]);
-//            Log.d("tourguide", "[dispatchTouchEvent] Y of image: "+pos[1]);
+            //            Log.d("tourguide", "[dispatchTouchEvent] X of image: "+pos[0]);
+            //            Log.d("tourguide", "[dispatchTouchEvent] Y of image: "+pos[1]);
 
-//            Log.d("tourguide", "[dispatchTouchEvent] X lower bound: "+ pos[0]);
-//            Log.d("tourguide", "[dispatchTouchEvent] X higher bound: "+(pos[0] +mViewHole.getWidth()));
-//
-//            Log.d("tourguide", "[dispatchTouchEvent] Y lower bound: "+ pos[1]);
-//            Log.d("tourguide", "[dispatchTouchEvent] Y higher bound: "+(pos[1] +mViewHole.getHeight()));
+            //            Log.d("tourguide", "[dispatchTouchEvent] X lower bound: "+ pos[0]);
+            //            Log.d("tourguide", "[dispatchTouchEvent] X higher bound: "+(pos[0] +mViewHole.getWidth()));
+            //
+            //            Log.d("tourguide", "[dispatchTouchEvent] Y lower bound: "+ pos[1]);
+            //            Log.d("tourguide", "[dispatchTouchEvent] Y higher bound: "+(pos[1] +mViewHole.getHeight()));
 
             if (isWithinButton(ev) && mOverlay != null && mOverlay.mDisableClickThroughHole) {
                 Log.d("tourguide", "block user clicking through hole");
@@ -272,9 +272,9 @@ public class FrameLayoutWithHole extends FrameLayout {
         int[] pos = new int[2];
         mViewHole.getLocationOnScreen(pos);
         return ev.getRawY() >= pos[1] &&
-                ev.getRawY() <= (pos[1] + mViewHole.getHeight()) &&
-                ev.getRawX() >= pos[0] &&
-                ev.getRawX() <= (pos[0] + mViewHole.getWidth());
+            ev.getRawY() <= (pos[1] + mViewHole.getHeight()) &&
+            ev.getRawX() >= pos[0] &&
+            ev.getRawX() <= (pos[0] + mViewHole.getWidth());
     }
 
     @Override
@@ -289,15 +289,15 @@ public class FrameLayoutWithHole extends FrameLayout {
 
             if (mOverlay.mStyle == Overlay.Style.RECTANGLE) {
                 mEraserCanvas.drawRect(
-                        mPos[0] - padding + mOverlay.mHoleOffsetLeft,
-                        mPos[1] - padding + mOverlay.mHoleOffsetTop,
-                        mPos[0] + mViewHole.getWidth() + padding + mOverlay.mHoleOffsetLeft,
-                        mPos[1] + mViewHole.getHeight() + padding + mOverlay.mHoleOffsetTop, mEraser);
+                    mPos[0] - padding + mOverlay.mHoleOffsetLeft,
+                    mPos[1] - padding + mOverlay.mHoleOffsetTop,
+                    mPos[0] + mViewHole.getWidth() + padding + mOverlay.mHoleOffsetLeft,
+                    mPos[1] + mViewHole.getHeight() + padding + mOverlay.mHoleOffsetTop, mEraser);
             } else if (mOverlay.mStyle == Overlay.Style.NO_HOLE) {
                 mEraserCanvas.drawCircle(
-                        mPos[0] + mViewHole.getWidth() / 2 + mOverlay.mHoleOffsetLeft,
-                        mPos[1] + mViewHole.getHeight() / 2 + mOverlay.mHoleOffsetTop,
-                        0, mEraser);
+                    mPos[0] + mViewHole.getWidth() / 2 + mOverlay.mHoleOffsetLeft,
+                    mPos[1] + mViewHole.getHeight() / 2 + mOverlay.mHoleOffsetTop,
+                    0, mEraser);
             } else if (mOverlay.mStyle == Overlay.Style.ROUNDED_RECTANGLE) {
                 int roundedCornerRadiusPx;
                 if (mOverlay.mRoundedCornerRadiusDp != 0) {
@@ -309,9 +309,9 @@ public class FrameLayoutWithHole extends FrameLayout {
             } else {
                 int holeRadius = mOverlay.mHoleRadius != Overlay.NOT_SET ? mOverlay.mHoleRadius : mRadius;
                 mEraserCanvas.drawCircle(
-                        mPos[0] + mViewHole.getWidth() / 2 + mOverlay.mHoleOffsetLeft,
-                        mPos[1] + mViewHole.getHeight() / 2 + mOverlay.mHoleOffsetTop,
-                        holeRadius, mEraser);
+                    mPos[0] + mViewHole.getWidth() / 2 + mOverlay.mHoleOffsetLeft,
+                    mPos[1] + mViewHole.getHeight() / 2 + mOverlay.mHoleOffsetTop,
+                    holeRadius, mEraser);
             }
         }
         canvas.drawBitmap(mEraserBitmap, 0, 0, null);

@@ -24,11 +24,20 @@ android {
         versionName gradleProps['VERSION_NAME']
     }
     buildTypes {
+        debug {
+            debuggable true
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt')
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    productFlavors {
+
+    }
+
     lintOptions {
         abortOnError false
     }
