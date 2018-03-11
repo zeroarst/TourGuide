@@ -285,8 +285,8 @@ public class TourGuide {
 
                 toolTipContainer.setBackgroundColor(mToolTip.mBackgroundColor);
 
-                toolTipTitleTV.setTextColor(mToolTip.mTextColor);
-                toolTipDescriptionTV.setTextColor(mToolTip.mTextColor);
+                toolTipTitleTV.setTextColor(mToolTip.mTitleColor);
+                toolTipDescriptionTV.setTextColor(mToolTip.mDescriptionColor);
 
                 if (mToolTip.mTitle == null || mToolTip.mTitle.isEmpty()) {
                     toolTipTitleTV.setVisibility(View.GONE);
