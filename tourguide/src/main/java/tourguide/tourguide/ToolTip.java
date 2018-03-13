@@ -165,7 +165,7 @@ public class ToolTip {
         return this;
     }
 
-    public ToolTip setOverlapping(int overlapping) {
+    public ToolTip setOffset(int overlapping) {
         this.mTooltipAndTargetViewOffset = overlapping;
         return this;
     }
