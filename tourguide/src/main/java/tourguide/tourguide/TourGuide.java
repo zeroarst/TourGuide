@@ -1,15 +1,17 @@
 package tourguide.tourguide;
 
 import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.graphics.Color;
 import android.graphics.Point;
+import android.os.Build;
+import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.view.ViewCompat;
-import android.os.Build;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -46,7 +48,16 @@ public class TourGuide {
     private Activity mActivity;
     protected MotionType mMotionType;
     protected FrameLayoutWithHole mFrameLayout;
+
+    @Nullable
     private View mToolTipViewGroup;
+
+    @Nullable
+    private TextView mToolTipTitleTextView;
+
+    @Nullable
+    private TextView mToolTipDescTextView;
+
     public ToolTip mToolTip;
     public Pointer mPointer;
     public Overlay mOverlay;
@@ -133,6 +144,10 @@ public class TourGuide {
      */
     public TourGuide setToolTip(ToolTip toolTip) {
         mToolTip = toolTip;
+        if (mToolTipViewGroup != null) {
+            ((ViewGroup) getDecoView()).removeView(mToolTipViewGroup);
+            setupToolTip();
+        }
         return this;
     }
 
@@ -168,9 +183,74 @@ public class TourGuide {
     /**
      * @return the ToolTip container View
      */
+    @Nullable
     public View getToolTip() {
         return mToolTipViewGroup;
     }
+
+    @Nullable
+    public TextView getToolTipTitleTextView() {
+        return mToolTipTitleTextView;
+    }
+
+    @Nullable
+    public TextView getToolTipDescTextView() {
+        return mToolTipDescTextView;
+    }
+
+    private Animator getDefaultUpdateToolTipTextOutAnimator() {
+        final ObjectAnimator oa = new ObjectAnimator();
+        oa.setPropertyName("alpha");
+        oa.setFloatValues(1f, 0f);
+        oa.setDuration(100);
+        return oa;
+    }
+
+    private Animator getDefaultUpdateToolTipTextInAnimator() {
+        final ObjectAnimator oa = new ObjectAnimator();
+        oa.setPropertyName("alpha");
+        oa.setFloatValues(0f, 1f);
+        oa.setDuration(100);
+        return oa;
+    }
+
+    public void updateToolTipTitleText(CharSequence text) {
+        if (mToolTipTitleTextView == null)
+            return;
+        updateViewText(mToolTipTitleTextView, text, getDefaultUpdateToolTipTextOutAnimator(), getDefaultUpdateToolTipTextInAnimator());
+    }
+
+    public void updateToolTipDescText(CharSequence text) {
+        if (mToolTipDescTextView == null)
+            return;
+        updateViewText(mToolTipDescTextView, text, getDefaultUpdateToolTipTextOutAnimator(), getDefaultUpdateToolTipTextInAnimator());
+    }
+
+    public void updateViewText(final TextView tv, final CharSequence text,
+        @Nullable final Animator outAnimator,
+        @Nullable final Animator InAnimator) {
+        if (tv == null)
+            return;
+        if (outAnimator != null) {
+            outAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    tv.setText(text);
+                    outAnimator.removeListener(this);
+                    if (InAnimator != null) {
+                        InAnimator.setTarget(tv);
+                        InAnimator.start();
+                    }
+                }
+            });
+            outAnimator.setTarget(tv);
+            outAnimator.start();
+        } else if (InAnimator != null) {
+            InAnimator.setTarget(tv);
+            InAnimator.start();
+        }
+    }
+
 
     /******
      *
@@ -278,28 +358,31 @@ public class TourGuide {
             if (mToolTip.getCustomView() == null) {
                 mToolTipViewGroup = layoutInflater.inflate(tourguide.tourguide.R.layout.tooltip, null);
                 View toolTipContainer = mToolTipViewGroup.findViewById(tourguide.tourguide.R.id.toolTip_container);
-                TextView toolTipTitleTV = (TextView) mToolTipViewGroup.findViewById(tourguide.tourguide.R.id.title);
-                TextView toolTipDescriptionTV = (TextView) mToolTipViewGroup.findViewById(tourguide.tourguide.R.id.description);
+                mToolTipTitleTextView = (TextView) mToolTipViewGroup.findViewById(tourguide.tourguide.R.id.title);
+                mToolTipDescTextView = (TextView) mToolTipViewGroup.findViewById(tourguide.tourguide.R.id.description);
 
                 /* set tooltip attributes */
 
                 toolTipContainer.setBackgroundColor(mToolTip.mBackgroundColor);
 
-                toolTipTitleTV.setTextColor(mToolTip.mTitleColor);
-                toolTipDescriptionTV.setTextColor(mToolTip.mDescriptionColor);
+                mToolTipTitleTextView.setTextColor(mToolTip.mTitleColor);
+                mToolTipTitleTextView.setGravity(mToolTip.mTitleGravity);
+
+                mToolTipDescTextView.setTextColor(mToolTip.mDescriptionColor);
+                mToolTipDescTextView.setGravity(mToolTip.mDescriptionGravity);
 
                 if (mToolTip.mTitle == null || mToolTip.mTitle.isEmpty()) {
-                    toolTipTitleTV.setVisibility(View.GONE);
+                    mToolTipTitleTextView.setVisibility(View.GONE);
                 } else {
-                    toolTipTitleTV.setVisibility(View.VISIBLE);
-                    toolTipTitleTV.setText(mToolTip.mTitle);
+                    mToolTipTitleTextView.setVisibility(View.VISIBLE);
+                    mToolTipTitleTextView.setText(mToolTip.mTitle);
                 }
 
                 if (mToolTip.mDescription == null || mToolTip.mDescription.isEmpty()) {
-                    toolTipDescriptionTV.setVisibility(View.GONE);
+                    mToolTipDescTextView.setVisibility(View.GONE);
                 } else {
-                    toolTipDescriptionTV.setVisibility(View.VISIBLE);
-                    toolTipDescriptionTV.setText(mToolTip.mDescription);
+                    mToolTipDescTextView.setVisibility(View.VISIBLE);
+                    mToolTipDescTextView.setText(mToolTip.mDescription);
                 }
 
                 if (mToolTip.mWidth != -1) {
@@ -331,7 +414,7 @@ public class TourGuide {
 
             Point resultPoint = new Point(); // this holds the final position of tooltip
             float density = mActivity.getResources().getDisplayMetrics().density;
-            final float adjustment = 10 * density; //adjustment is that little overlapping area of tooltip and targeted button
+            final float adjustment = mToolTip.mTooltipAndTargetViewOffset * density; //adjustment is that little overlapping area of tooltip and targeted button
 
             // calculate x position, based on gravity, tooltipMeasuredWidth, parent max width, x position of target view, adjustment
             if (toolTipMeasuredWidth > parent.getWidth()) {
@@ -354,13 +437,13 @@ public class TourGuide {
             }
             // 2. x left boundary check
             if (resultPoint.x < 0) {
-                mToolTipViewGroup.getLayoutParams().width = toolTipMeasuredWidth + resultPoint.x; //since point.x is negative, use plus
                 resultPoint.x = 0;
             }
             // 3. x right boundary check
             int tempRightX = resultPoint.x + toolTipMeasuredWidth;
             if (tempRightX > parent.getWidth()) {
-                mToolTipViewGroup.getLayoutParams().width = parent.getWidth() - resultPoint.x; //since point.x is negative, use plus
+                mToolTipViewGroup.getLayoutParams().width = toolTipMeasuredWidth;
+                resultPoint.x = parent.getWidth() - toolTipMeasuredWidth;
             }
 
             // pass toolTip onClickListener into toolTipViewGroup
@@ -390,6 +473,7 @@ public class TourGuide {
                     int toolTipHeightAfterLayouted = mToolTipViewGroup.getHeight();
                     fixedY = getYForTooTip(mToolTip.mGravity, toolTipHeightAfterLayouted, targetViewY, adjustment);
                     layoutParams.setMargins((int) mToolTipViewGroup.getX(), fixedY, 0, 0);
+                    mToolTipViewGroup.setLayoutParams(layoutParams);
                 }
             });
 

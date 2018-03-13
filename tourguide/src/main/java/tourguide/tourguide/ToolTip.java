@@ -14,12 +14,15 @@ import android.view.animation.BounceInterpolator;
 public class ToolTip {
     public String mTitle, mDescription;
     public int mBackgroundColor, mTitleColor, mDescriptionColor;
+    public int mTitleGravity, mDescriptionGravity;
     public Animation mEnterAnimation, mExitAnimation;
     public boolean mShadow;
     public int mGravity;
     public View.OnClickListener mOnClickListener;
     public ViewGroup mCustomView;
     public int mWidth;
+    public int mTooltipAndTargetViewOffset; // adjustment is that little overlapping area of tooltip and targeted view
+
 
     public ToolTip() {
         /* default values */
@@ -28,12 +31,17 @@ public class ToolTip {
         mBackgroundColor = Color.parseColor("#3498db");
         mTitleColor = mDescriptionColor = Color.parseColor("#FFFFFF");
 
+        mTitleGravity = Gravity.CENTER;
+        mDescriptionGravity = Gravity.CENTER;
+
         mEnterAnimation = new AlphaAnimation(0f, 1f);
         mEnterAnimation.setDuration(1000);
         mEnterAnimation.setFillAfter(true);
         mEnterAnimation.setInterpolator(new BounceInterpolator());
         mShadow = true;
         mWidth = -1;
+
+        mTooltipAndTargetViewOffset = 10;
 
         // TODO: exit animation
         mGravity = Gravity.CENTER;
@@ -94,6 +102,14 @@ public class ToolTip {
         return this;
     }
 
+    public void setTitleGravity(int gravity) {
+        this.mTitleGravity = gravity;
+    }
+
+    public void setDescriptionGravity(int gravity) {
+        this.mDescriptionGravity = gravity;
+    }
+
     /**
      * Set enter animation
      *
@@ -146,6 +162,11 @@ public class ToolTip {
     public ToolTip setWidth(int px) {
         if (px >= 0)
             mWidth = px;
+        return this;
+    }
+
+    public ToolTip setOverlapping(int overlapping) {
+        this.mTooltipAndTargetViewOffset = overlapping;
         return this;
     }
 
