@@ -43,7 +43,7 @@ public class Sequence {
 
         if(mContinueMethod == ContinueMethod.OVERLAY) {
             for (final ChainTourGuide tourGuide : mTourGuideArray) {
-                tourGuide.mOverlay.mOnClickListener = new View.OnClickListener() {
+                tourGuide.mOverlay.mOnClickOutsideTargetListener = new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         mParentTourGuide.next();
@@ -164,7 +164,7 @@ public class Sequence {
         private void checkOverlayListener(ContinueMethod continueMethod) {
             if(continueMethod == ContinueMethod.OVERLAY_LISTENER){
                 boolean pass = true;
-                if (mDefaultOverlay != null && mDefaultOverlay.mOnClickListener != null) {
+                if (mDefaultOverlay != null && mDefaultOverlay.mOnClickOutsideTargetListener != null) {
                     pass = true;
                     // when default listener is available, we loop through individual tour guide, and
                     // assign default listener to individual tour guide
@@ -172,15 +172,15 @@ public class Sequence {
                         if (tourGuide.mOverlay == null) {
                             tourGuide.mOverlay = mDefaultOverlay;
                         }
-                        if (tourGuide.mOverlay != null && tourGuide.mOverlay.mOnClickListener == null) {
-                            tourGuide.mOverlay.mOnClickListener = mDefaultOverlay.mOnClickListener;
+                        if (tourGuide.mOverlay != null && tourGuide.mOverlay.mOnClickOutsideTargetListener == null) {
+                            tourGuide.mOverlay.mOnClickOutsideTargetListener = mDefaultOverlay.mOnClickOutsideTargetListener;
                         }
                     }
                 } else { // case where: default listener is not available
 
                     for (ChainTourGuide tourGuide : mTourGuideArray) {
                         //Both of the overlay and default listener is not null, throw the error
-                        if (tourGuide.mOverlay != null && tourGuide.mOverlay.mOnClickListener == null) {
+                        if (tourGuide.mOverlay != null && tourGuide.mOverlay.mOnClickOutsideTargetListener == null) {
                             pass = false;
                             break;
                         } else if (tourGuide.mOverlay == null){
@@ -197,11 +197,11 @@ public class Sequence {
             } else if(continueMethod == ContinueMethod.OVERLAY){
                 // when Overlay ContinueMethod is used, listener must not be supplied (to avoid unexpected result)
                 boolean pass = true;
-                if (mDefaultOverlay != null && mDefaultOverlay.mOnClickListener != null) {
+                if (mDefaultOverlay != null && mDefaultOverlay.mOnClickOutsideTargetListener != null) {
                     pass = false;
                 } else {
                     for (ChainTourGuide tourGuide : mTourGuideArray) {
-                        if (tourGuide.mOverlay != null && tourGuide.mOverlay.mOnClickListener != null ) {
+                        if (tourGuide.mOverlay != null && tourGuide.mOverlay.mOnClickOutsideTargetListener != null ) {
                             pass = false;
                             break;
                         }

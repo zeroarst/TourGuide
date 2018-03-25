@@ -7,17 +7,22 @@ import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Build;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.view.ViewCompat;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -28,42 +33,45 @@ import net.i2p.android.ext.floatingactionbutton.FloatingActionButton;
  * Created by tanjunrong on 2/10/15.
  */
 public class TourGuide {
-    /**
-     * This describes the animation techniques
-     */
-    public enum Technique {
-        CLICK, HORIZONTAL_LEFT, HORIZONTAL_RIGHT, VERTICAL_UPWARD, VERTICAL_DOWNWARD
-    }
-
-    /**
-     * This describes the allowable motion, for example if you want the users to learn about clicking, but want to stop them from swiping, then use
-     * CLICK_ONLY
-     */
-    public enum MotionType {
-        ALLOW_ALL, CLICK_ONLY, SWIPE_ONLY
-    }
-
+    public ToolTip mToolTip;
+    public Pointer mPointer;
+    public Overlay mOverlay;
     protected Technique mTechnique;
     protected View mHighlightedView;
-    private Activity mActivity;
     protected MotionType mMotionType;
+
+    @Nullable
+    private ViewGroup mPopupWindowOverlayLayout;
+
     protected FrameLayoutWithHole mFrameLayout;
+    private Activity mActivity;
+
 
     @Nullable
     private View mToolTipViewGroup;
 
     @Nullable
     private TextView mToolTipTitleTextView;
-
     @Nullable
     private TextView mToolTipDescTextView;
-
-    public ToolTip mToolTip;
-    public Pointer mPointer;
-    public Overlay mOverlay;
-
     private DialogFragment mDialogFragment;
 
+    private boolean mIsPopupWindow = false;
+
+    public TourGuide isPopupWindow(boolean yesNo) {
+        this.mIsPopupWindow = yesNo;
+        return this;
+    }
+
+    /* Constructor */
+    public TourGuide(Activity activity) {
+        mActivity = activity;
+    }
+
+    public TourGuide(DialogFragment dialogFragment) {
+        mDialogFragment = dialogFragment;
+        mActivity = dialogFragment.getActivity();
+    }
 
     /*************
      *
@@ -78,16 +86,6 @@ public class TourGuide {
 
     public static TourGuide init(DialogFragment dialogFragment) {
         return new TourGuide(dialogFragment);
-    }
-
-    /* Constructor */
-    public TourGuide(Activity activity) {
-        mActivity = activity;
-    }
-
-    public TourGuide(DialogFragment dialogFragment) {
-        mDialogFragment = dialogFragment;
-        mActivity = dialogFragment.getActivity();
     }
 
     /**
@@ -125,33 +123,6 @@ public class TourGuide {
     }
 
     /**
-     * Sets the overlay
-     *
-     * @param overlay this overlay object should contain the attributes of the overlay, such as background color, animation, Style, etc
-     * @return return TourGuide instance for chaining purpose
-     */
-    public TourGuide setOverlay(Overlay overlay) {
-        mOverlay = overlay;
-        return this;
-    }
-
-    /**
-     * Set the toolTip
-     *
-     * @param toolTip this toolTip object should contain the attributes of the ToolTip, such as, the title text, and the description text,
-     *                background color, etc
-     * @return return TourGuide instance for chaining purpose
-     */
-    public TourGuide setToolTip(ToolTip toolTip) {
-        mToolTip = toolTip;
-        if (mToolTipViewGroup != null) {
-            ((ViewGroup) getDecoView()).removeView(mToolTipViewGroup);
-            setupToolTip();
-        }
-        return this;
-    }
-
-    /**
      * Set the Pointer
      *
      * @param pointer this pointer object should contain the attributes of the Pointer, such as the pointer color, pointer gravity, etc, refer to
@@ -168,8 +139,15 @@ public class TourGuide {
      */
     public void cleanUp() {
         mFrameLayout.cleanUp();
-        if (mToolTipViewGroup != null) {
+
+        if (mPopupWindowOverlayLayout != null) {
+            getWindow().getWindowManager().removeView(mPopupWindowOverlayLayout);
+            // TODO not sure if required?
+            mPopupWindowOverlayLayout = null;
+        } else if (mToolTipViewGroup != null) {
             ((ViewGroup) getDecoView()).removeView(mToolTipViewGroup);
+            // TODO not sure if required?
+            mToolTipViewGroup = null;
         }
     }
 
@@ -181,11 +159,41 @@ public class TourGuide {
     }
 
     /**
+     * Sets the overlay
+     *
+     * @param overlay this overlay object should contain the attributes of the overlay, such as background color, animation, Style, etc
+     * @return return TourGuide instance for chaining purpose
+     */
+    public TourGuide setOverlay(Overlay overlay) {
+        mOverlay = overlay;
+        return this;
+    }
+
+    /**
      * @return the ToolTip container View
      */
     @Nullable
     public View getToolTip() {
         return mToolTipViewGroup;
+    }
+
+    /**
+     * Set the toolTip
+     *
+     * @param toolTip this toolTip object should contain the attributes of the ToolTip, such as, the title text, and the description text,
+     *                background color, etc
+     * @return return TourGuide instance for chaining purpose
+     */
+    public TourGuide setToolTip(ToolTip toolTip) {
+        mToolTip = toolTip;
+        if (mPopupWindowOverlayLayout != null) {
+            getWindow().getWindowManager().removeView(mPopupWindowOverlayLayout);
+            setupToolTip();
+        } else if (mToolTipViewGroup != null) {
+            ((ViewGroup) getDecoView()).removeView(mToolTipViewGroup);
+            setupToolTip();
+        }
+        return this;
     }
 
     @Nullable
@@ -251,7 +259,6 @@ public class TourGuide {
         }
     }
 
-
     /******
      *
      * Private methods
@@ -274,8 +281,9 @@ public class TourGuide {
     //TODO: move into Pointer
     private int getYBasedOnGravity(int height) {
         int[] pos = new int[2];
-        mHighlightedView.getLocationInWindow(pos);
+        mHighlightedView.getLocationOnScreen(pos);
         int y = pos[1];
+
         if ((mPointer.mGravity & Gravity.BOTTOM) == Gravity.BOTTOM) {
             return y + mHighlightedView.getHeight() - height;
         } else if ((mPointer.mGravity & Gravity.TOP) == Gravity.TOP) {
@@ -312,6 +320,7 @@ public class TourGuide {
     private void startView() {
         /* Initialize a frame layout with a hole */
         mFrameLayout = new FrameLayoutWithHole(mActivity, mHighlightedView, mMotionType, mOverlay);
+
         /* handle click disable */
         handleDisableClicking(mFrameLayout);
 
@@ -320,28 +329,105 @@ public class TourGuide {
             FloatingActionButton fab = setupAndAddFABToFrameLayout(mFrameLayout);
             performAnimationOn(fab);
         }
-        setupFrameLayout();
-        /* setup tooltip view */
-        setupToolTip();
+
+        if (mIsPopupWindow) {
+
+            // To fix the issue tooltip flickers.
+            getPopupWindowOverlayLayout().getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                        getPopupWindowOverlayLayout().getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                    } else {
+                        getPopupWindowOverlayLayout().getViewTreeObserver().removeGlobalOnLayoutListener(this);
+                    }
+                    /* setup tooltip view */
+                    setupToolTip();
+                }
+            });
+
+            setupFrameLayout();
+
+        } else {
+
+
+            setupFrameLayout();
+
+            /* setup tooltip view */
+            setupToolTip();
+        }
+
+
     }
 
-    private void handleDisableClicking(FrameLayoutWithHole frameLayoutWithHole) {
-        // 1. if user provides an overlay listener, use that as 1st priority
-        if (mOverlay != null && mOverlay.mOnClickListener != null) {
-            frameLayoutWithHole.setClickable(true);
-            frameLayoutWithHole.setOnClickListener(mOverlay.mOnClickListener);
-        }
-        // 2. if overlay listener is not provided, check if it's disabled
-        else if (mOverlay != null && mOverlay.mDisableClick) {
+    private GestureDetector mGestureDetector;
+
+    private void handleDisableClicking(final FrameLayoutWithHole frameLayoutWithHole) {
+        if (mOverlay == null)
+            return;
+
+        if (mOverlay.hasTargetListeners() || mOverlay.mOnClickOutsideTargetListener != null || mOverlay.mDisableClickThrough || mOverlay
+            .mDisableInteractWithTarget) {
             Log.w("tourguide", "Overlay's default OnClickListener is null, it will proceed to next tourguide when it is clicked");
+
+            mGestureDetector = new GestureDetector(new GestureDetector.SimpleOnGestureListener() {
+                @Override
+                public void onLongPress(MotionEvent e) {
+                    if (frameLayoutWithHole.isWithinTargetBoundary(e) && mOverlay.mOnLongClickTargetListener != null) {
+                        mOverlay.mOnLongClickTargetListener.onLongClick(frameLayoutWithHole);
+                    }
+                }
+
+                @Override
+                public boolean onSingleTapUp(MotionEvent e) {
+                    boolean withinTarget = frameLayoutWithHole.isWithinTargetBoundary(e);
+                    if (withinTarget && mOverlay.mOnClickTargetListener != null) {
+                        mOverlay.mOnClickTargetListener.onClick(frameLayoutWithHole);
+                        return true;
+                    } else if (mOverlay.mOnClickOutsideTargetListener != null) {
+                        mOverlay.mOnClickOutsideTargetListener.onClick(frameLayoutWithHole);
+                        return true;
+                    } else if (!withinTarget && mOverlay.mClickOutsideTargetToCancel) {
+                        cleanUp();
+                    }
+                    return false;
+                }
+            });
+
+            frameLayoutWithHole.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    if (frameLayoutWithHole.isWithinTargetBoundary(event) && mOverlay.mOnTouchTargetListener != null) {
+                        if (mOverlay.mOnTouchTargetListener.onTouch(v, event))
+                            return true;
+                    }
+                    return mGestureDetector.onTouchEvent(event);
+
+                }
+            });
+
             frameLayoutWithHole.setViewHole(mHighlightedView);
             frameLayoutWithHole.setSoundEffectsEnabled(false);
-            frameLayoutWithHole.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                } // do nothing, disabled.
-            });
         }
+
+
+        /* Original source */
+        // // 1. if user provides an overlay listener, use that as 1st priority
+        // if (mOverlay.mOnClickListener != null) {
+        //     frameLayoutWithHole.setClickable(true);
+        //     frameLayoutWithHole.setOnClickListener(mOverlay.mOnClickListener);
+        // }
+        // // 2. if overlay listener is not provided, check if it's disabled
+        // if (mOverlay.mDisableClick) {
+        //     Log.w("tourguide", "Overlay's default OnClickListener is null, it will proceed to next tourguide when it is clicked");
+        //     frameLayoutWithHole.setViewHole(mHighlightedView);
+        //     frameLayoutWithHole.setSoundEffectsEnabled(false);
+        //     frameLayoutWithHole.setOnClickListener(new View.OnClickListener() {
+        //         @Override
+        //         public void onClick(View v) {
+        //         } // do nothing, disabled.
+        //     });
+        // }
     }
 
     private void setupToolTip() {
@@ -414,7 +500,8 @@ public class TourGuide {
 
             Point resultPoint = new Point(); // this holds the final position of tooltip
             float density = mActivity.getResources().getDisplayMetrics().density;
-            final float adjustment = mToolTip.mTooltipAndTargetViewOffset * density; //adjustment is that little overlapping area of tooltip and targeted button
+            final float adjustment = mToolTip.mTooltipAndTargetViewOffset * density; //adjustment is that little overlapping area of tooltip and
+            // targeted button
 
             // calculate x position, based on gravity, tooltipMeasuredWidth, parent max width, x position of target view, adjustment
             if (toolTipMeasuredWidth > parent.getWidth()) {
@@ -428,11 +515,11 @@ public class TourGuide {
             // add view to parent
             //            ((ViewGroup) mActivity.getWindow().getDecorView().findViewById(android.R.id.content)).addView(mToolTipViewGroup,
             // layoutParams);
-            parent.addView(mToolTipViewGroup, layoutParams);
+            // parent.addView(mToolTipViewGroup, layoutParams);
 
             // 1. width < screen check
             if (toolTipMeasuredWidth > parent.getWidth()) {
-                mToolTipViewGroup.getLayoutParams().width = parent.getWidth();
+                layoutParams.width = parent.getWidth();
                 toolTipMeasuredWidth = parent.getWidth();
             }
             // 2. x left boundary check
@@ -442,7 +529,7 @@ public class TourGuide {
             // 3. x right boundary check
             int tempRightX = resultPoint.x + toolTipMeasuredWidth;
             if (tempRightX > parent.getWidth()) {
-                mToolTipViewGroup.getLayoutParams().width = toolTipMeasuredWidth;
+                layoutParams.width = toolTipMeasuredWidth;
                 resultPoint.x = parent.getWidth() - toolTipMeasuredWidth;
             }
 
@@ -479,8 +566,33 @@ public class TourGuide {
 
             // set the position using setMargins on the left and top
             layoutParams.setMargins(resultPoint.x, resultPoint.y, 0, 0);
+
+            if (mIsPopupWindow) {
+                getPopupWindowOverlayLayout().addView(mToolTipViewGroup, layoutParams);
+            } else
+                parent.addView(mToolTipViewGroup, layoutParams);
+
         }
 
+    }
+
+    private ViewGroup getPopupWindowOverlayLayout() {
+        if (mPopupWindowOverlayLayout == null) {
+            mPopupWindowOverlayLayout = new FrameLayout(mActivity);
+            addToWindowManager(getPopupWindowOverlayLayout());
+        }
+        return mPopupWindowOverlayLayout;
+    }
+
+    private void addToWindowManager(View v) {
+        WindowManager wm = getWindow().getWindowManager();
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT);
+        lp.packageName = mActivity.getPackageName();
+        lp.format = PixelFormat.TRANSLUCENT;
+        lp.type = WindowManager.LayoutParams.TYPE_APPLICATION_PANEL;
+        lp.flags = WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;
+        wm.addView(v, lp);
     }
 
     private int getXForTooTip(int gravity, int toolTipMeasuredWidth, int targetViewX, float adjustment) {
@@ -543,10 +655,11 @@ public class TourGuide {
                 }
                 final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
-                frameLayoutWithHole.addView(fab, params);
 
                 // measure size of image to be placed
                 params.setMargins(getXBasedOnGravity(invisFab.getWidth()), getYBasedOnGravity(invisFab.getHeight()), 0, 0);
+
+                frameLayoutWithHole.addView(fab, params);
             }
         });
 
@@ -558,15 +671,19 @@ public class TourGuide {
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT);
 
-        ViewGroup contentArea = (ViewGroup) getDecoView().findViewById(android.R.id.content);
+        if (mIsPopupWindow) {
+            getPopupWindowOverlayLayout().addView(mFrameLayout, layoutParams);
+        } else {
+            ViewGroup contentArea = (ViewGroup) getDecoView().findViewById(android.R.id.content);
 
-        int[] pos = new int[2];
-        contentArea.getLocationOnScreen(pos);
-        // frameLayoutWithHole's coordinates are calculated taking full screen height into account
-        // but we're adding it to the content area only, so we need to offset it to the same Y value of contentArea
+            int[] pos = new int[2];
+            contentArea.getLocationOnScreen(pos);
+            // frameLayoutWithHole's coordinates are calculated taking full screen height into account
+            // but we're adding it to the content area only, so we need to offset it to the same Y value of contentArea
 
-        layoutParams.setMargins(0, -pos[1], 0, 0);
-        contentArea.addView(mFrameLayout, layoutParams);
+            layoutParams.setMargins(0, -pos[1], 0, 0);
+            contentArea.addView(mFrameLayout, layoutParams);
+        }
     }
 
     private void performAnimationOn(final View view) {
@@ -778,10 +895,29 @@ public class TourGuide {
     }
 
     private View getDecoView() {
+        return getWindow().getDecorView();
+    }
+
+    private Window getWindow() {
         if (mDialogFragment != null && mDialogFragment.getDialog() != null && mDialogFragment.getDialog().getWindow() != null) {
-            return mDialogFragment.getDialog().getWindow().getDecorView();
+            return mDialogFragment.getDialog().getWindow();
         } else
-            return mActivity.getWindow().getDecorView();
+            return mActivity.getWindow();
+    }
+
+    /**
+     * This describes the animation techniques
+     */
+    public enum Technique {
+        CLICK, HORIZONTAL_LEFT, HORIZONTAL_RIGHT, VERTICAL_UPWARD, VERTICAL_DOWNWARD
+    }
+
+    /**
+     * This describes the allowable motion, for example if you want the users to learn about clicking, but want to stop them from swiping, then use
+     * CLICK_ONLY
+     */
+    public enum MotionType {
+        ALLOW_ALL, CLICK_ONLY, SWIPE_ONLY
     }
 
 }

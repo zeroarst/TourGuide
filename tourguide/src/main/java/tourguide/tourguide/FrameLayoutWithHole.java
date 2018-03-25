@@ -108,7 +108,7 @@ public class FrameLayoutWithHole extends FrameLayout {
         mMotionType = motionType;
 
         // Init a RectF to be used in OnDraw for a ROUNDED_RECTANGLE Style Overlay
-        if (mOverlay !=null && mOverlay.mStyle == Overlay.Style.ROUNDED_RECTANGLE) {
+        if (mOverlay != null && mOverlay.mStyle == Overlay.Style.ROUNDED_RECTANGLE) {
             int recfFPaddingPx = (int) (mOverlay.mPaddingDp * mDensity);
             mRectF = new RectF(mPos[0] - recfFPaddingPx + mOverlay.mHoleOffsetLeft,
                 mPos[1] - recfFPaddingPx + mOverlay.mHoleOffsetTop,
@@ -255,26 +255,62 @@ public class FrameLayoutWithHole extends FrameLayout {
             //            Log.d("tourguide", "[dispatchTouchEvent] Y lower bound: "+ pos[1]);
             //            Log.d("tourguide", "[dispatchTouchEvent] Y higher bound: "+(pos[1] +mViewHole.getHeight()));
 
-            if (isWithinButton(ev) && mOverlay != null && mOverlay.mDisableClickThroughHole) {
-                Log.d("tourguide", "block user clicking through hole");
-                // block it
-                return true;
-            } else if (isWithinButton(ev)) {
-                // let it pass through
-                return false;
+            if (mOverlay != null) {
+                if (isWithinTargetBoundary(ev)) {
+                    if (mOverlay.hasTargetListeners() || mOverlay.mDisableInteractWithTarget) {
+                        Log.d("tourguide", "block user clicking through hole");
+                        // block it, but still handle touch event.
+                        // We want to those listeners still work.
+                        super.dispatchTouchEvent(ev);
+                        return true;
+                    }
+                } else if (mOverlay.mOnClickOutsideTargetListener != null || mOverlay.mDisableClickThrough) {
+                    super.dispatchTouchEvent(ev);
+                    return true;
+                }
             }
+
+            // let it pass through
+            return false;
+
+
+            // if (isWithinButton(ev)) {
+            //     if (mOverlay != null) {
+            //         if (mOverlay.mDisableClickThroughHole) {
+            //             Log.d("tourguide", "block user clicking through hole");
+            //             // block it, but still handle touch event.
+            //             // We want to those listeners still work.
+            //             super.dispatchTouchEvent(ev);
+            //             return true;
+            //         }
+            //     } else {
+            //         // let it pass through
+            //         return false;
+            //     }
+            // }
+
+            // if (isWithinButton(ev) && mOverlay != null && mOverlay.mDisableClickThroughHole) {
+            //     Log.d("tourguide", "block user clicking through hole");
+            //     // block it
+            //     return true;
+            // } else if (isWithinButton(ev)) {
+            //     // let it pass through
+            //     return false;
+            // }
         }
         // do nothing, just propagating up to super
         return super.dispatchTouchEvent(ev);
     }
 
-    private boolean isWithinButton(MotionEvent ev) {
+    protected boolean isWithinTargetBoundary(MotionEvent ev) {
         int[] pos = new int[2];
         mViewHole.getLocationOnScreen(pos);
-        return ev.getRawY() >= pos[1] &&
-            ev.getRawY() <= (pos[1] + mViewHole.getHeight()) &&
-            ev.getRawX() >= pos[0] &&
-            ev.getRawX() <= (pos[0] + mViewHole.getWidth());
+        RectF rect = new RectF(pos[0], pos[1], pos[0] + mViewHole.getWidth(), pos[1] + mViewHole.getHeight());
+        return rect.contains(ev.getRawX(), ev.getRawY());
+        // return ev.getRawY() >= pos[1] &&
+        //     ev.getRawY() <= (pos[1] + mViewHole.getHeight()) &&
+        //     ev.getRawX() >= pos[0] &&
+        //     ev.getRawX() <= (pos[0] + mViewHole.getWidth());
     }
 
     @Override
@@ -288,6 +324,8 @@ public class FrameLayoutWithHole extends FrameLayout {
             Log.i("TOURGUIDE", String.format("**********PADDING: %s**********", padding));
 
             if (mOverlay.mStyle == Overlay.Style.RECTANGLE) {
+                Log.d("_bbb", "onDraw: " + String.valueOf(mPos[1]));
+
                 mEraserCanvas.drawRect(
                     mPos[0] - padding + mOverlay.mHoleOffsetLeft,
                     mPos[1] - padding + mOverlay.mHoleOffsetTop,
@@ -344,5 +382,10 @@ public class FrameLayoutWithHole extends FrameLayout {
      */
     public int getScreenHeight(Activity activity) {
         return activity.getResources().getDisplayMetrics().heightPixels;
+    }
+
+    @Override
+    public boolean performClick() {
+        return super.performClick();
     }
 }
