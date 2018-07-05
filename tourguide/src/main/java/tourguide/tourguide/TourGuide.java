@@ -33,17 +33,37 @@ import net.i2p.android.ext.floatingactionbutton.FloatingActionButton;
  * Created by tanjunrong on 2/10/15.
  */
 public class TourGuide {
+
+    @Nullable
     public ToolTip mToolTip;
+
+    @Nullable
     public Pointer mPointer;
+
+    @Nullable
     public Overlay mOverlay;
+
+    @Nullable
     protected Technique mTechnique;
+
+    @Nullable
     protected View mHighlightedView;
+
+    @Nullable
     protected MotionType mMotionType;
+
+    @Nullable
+    protected Target mTarget;
+
+    public enum Target {
+        VIEW, WINDOW
+    }
 
     @Nullable
     private ViewGroup mPopupWindowOverlayLayout;
 
     protected FrameLayoutWithHole mFrameLayout;
+
     private Activity mActivity;
 
 
@@ -111,12 +131,21 @@ public class TourGuide {
     }
 
     /**
+     * Sets the TourGuide to be played on whole screen instead of a target view.
+     * @return
+     */
+    public TourGuide play() {
+        return playOn(null);
+    }
+
+    /**
      * Sets the targeted view for TourGuide to play on
      *
      * @param targetView the view in which the tutorial button will be placed on top of
      * @return return TourGuide instance for chaining purpose
      */
-    public TourGuide playOn(View targetView) {
+    public TourGuide playOn(@Nullable View targetView) {
+        mTarget = targetView == null ? Target.WINDOW : Target.VIEW;
         mHighlightedView = targetView;
         setupView();
         return this;
@@ -138,7 +167,10 @@ public class TourGuide {
      * Clean up the tutorial that is added to the activity
      */
     public void cleanUp() {
-        mFrameLayout.cleanUp();
+        if (mFrameLayout != null) {
+            mFrameLayout.cleanUp();
+            mFrameLayout = null;
+        }
 
         if (mPopupWindowOverlayLayout != null) {
             getWindow().getWindowManager().removeView(mPopupWindowOverlayLayout);
@@ -265,10 +297,11 @@ public class TourGuide {
      *
      *******/
     //TODO: move into Pointer
-    private int getXBasedOnGravity(int width) {
-        int[] pos = new int[2];
-        mHighlightedView.getLocationOnScreen(pos);
-        int x = pos[0];
+    private int getXBasedOnGravity(int width, @Nullable int[] highlightedViewPos) {
+        if (highlightedViewPos == null) {
+            highlightedViewPos = getHighlightedViewPos();
+        }
+        int x = highlightedViewPos[0];
         if ((mPointer.mGravity & Gravity.RIGHT) == Gravity.RIGHT) {
             return x + mHighlightedView.getWidth() - width;
         } else if ((mPointer.mGravity & Gravity.LEFT) == Gravity.LEFT) {
@@ -279,10 +312,11 @@ public class TourGuide {
     }
 
     //TODO: move into Pointer
-    private int getYBasedOnGravity(int height) {
-        int[] pos = new int[2];
-        mHighlightedView.getLocationOnScreen(pos);
-        int y = pos[1];
+    private int getYBasedOnGravity(int height, @Nullable int[] highlightedViewPos) {
+        if (highlightedViewPos == null) {
+            highlightedViewPos = getHighlightedViewPos();
+        }
+        int y = highlightedViewPos[1];
 
         if ((mPointer.mGravity & Gravity.BOTTOM) == Gravity.BOTTOM) {
             return y + mHighlightedView.getHeight() - height;
@@ -293,12 +327,20 @@ public class TourGuide {
         }
     }
 
+    private int[] getHighlightedViewPos() {
+        if (mHighlightedView == null)
+            return new int[]{0, 0};
+        int[] pos = new int[2];
+        mHighlightedView.getLocationOnScreen(pos);
+        return pos;
+    }
+
     protected void setupView() {
         // TourGuide can only be setup after all the views is ready and obtain it's position/measurement
         // so when this is the 1st time TourGuide is being added,
         // else block will be executed, and ViewTreeObserver will make TourGuide setup process to be delayed until everything is ready
         // when this is run the 2nd or more times, if block will be executed
-        if (ViewCompat.isAttachedToWindow(mHighlightedView)) {
+        if (mHighlightedView == null || ViewCompat.isAttachedToWindow(mHighlightedView)) {
             startView();
         } else {
             final ViewTreeObserver viewTreeObserver = mHighlightedView.getViewTreeObserver();
@@ -326,13 +368,13 @@ public class TourGuide {
 
         /* setup floating action button */
         if (mPointer != null) {
-            FloatingActionButton fab = setupAndAddFABToFrameLayout(mFrameLayout);
+            final FloatingActionButton fab = setupAndAddFABToFrameLayout(mFrameLayout);
             performAnimationOn(fab);
         }
 
         if (mIsPopupWindow) {
 
-            // To fix the issue tooltip flickers.
+            // To fix the issue tooltip flickers. Also tool tip shown under the popup window if it is listPopupWindow.
             getPopupWindowOverlayLayout().getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
                 @Override
                 public void onGlobalLayout() {
@@ -345,6 +387,7 @@ public class TourGuide {
                     setupToolTip();
                 }
             });
+
 
             setupFrameLayout();
 
@@ -388,7 +431,10 @@ public class TourGuide {
                         mOverlay.mOnClickOutsideTargetListener.onClick(frameLayoutWithHole);
                         return true;
                     } else if (!withinTarget && mOverlay.mClickOutsideTargetToCancel) {
-                        cleanUp();
+                        if (mOverlay.mOnClickOutsideCancelListener != null)
+                            mOverlay.mOnClickOutsideCancelListener.onCancel(mActivity, TourGuide.this);
+                        else
+                            cleanUp();
                     }
                     return false;
                 }
@@ -457,14 +503,14 @@ public class TourGuide {
                 mToolTipDescTextView.setTextColor(mToolTip.mDescriptionColor);
                 mToolTipDescTextView.setGravity(mToolTip.mDescriptionGravity);
 
-                if (mToolTip.mTitle == null || mToolTip.mTitle.isEmpty()) {
+                if (mToolTip.mTitle == null || mToolTip.mTitle.length() == 0) {
                     mToolTipTitleTextView.setVisibility(View.GONE);
                 } else {
                     mToolTipTitleTextView.setVisibility(View.VISIBLE);
                     mToolTipTitleTextView.setText(mToolTip.mTitle);
                 }
 
-                if (mToolTip.mDescription == null || mToolTip.mDescription.isEmpty()) {
+                if (mToolTip.mDescription == null || mToolTip.mDescription.length() == 0) {
                     mToolTipDescTextView.setVisibility(View.GONE);
                 } else {
                     mToolTipDescTextView.setVisibility(View.VISIBLE);
@@ -488,13 +534,30 @@ public class TourGuide {
             }
 
             /* position and size calculation */
-            int[] pos = new int[2];
-            mHighlightedView.getLocationOnScreen(pos);
-            int targetViewX = pos[0];
-            final int targetViewY = pos[1];
+            int targetViewX = -1;
+            int targetViewY = -1;
+            switch (mTarget) {
+                case WINDOW:
+                    break;
+                case VIEW:
+                    int[] pos = new int[2];
+                    mHighlightedView.getLocationOnScreen(pos);
+                    targetViewX = pos[0];
+                    targetViewY = pos[1];
+                    break;
+            }
 
             // get measured size of tooltip
-            mToolTipViewGroup.measure(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+            // mToolTipViewGroup.measure(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+
+            /* Fix the issue the TextView's height is not correctly calculated
+             * https://stackoverflow.com/questions/19908003/getting-height-of-text-view-before-rendering-to-layout
+             * https://stackoverflow.com/questions/30591053/measure-height-of-multi-line-textview-before-rendering
+             * */
+            int widthSpec = View.MeasureSpec.makeMeasureSpec(getScreenWidth(), View.MeasureSpec.AT_MOST);
+            int heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+            mToolTipViewGroup.measure(widthSpec, heightSpec);
+
             int toolTipMeasuredWidth = mToolTip.mWidth != -1 ? mToolTip.mWidth : mToolTipViewGroup.getMeasuredWidth();
             int toolTipMeasuredHeight = mToolTipViewGroup.getMeasuredHeight();
 
@@ -534,35 +597,69 @@ public class TourGuide {
             }
 
             // pass toolTip onClickListener into toolTipViewGroup
-            if (mToolTip.mOnClickListener != null) {
-                mToolTipViewGroup.setOnClickListener(mToolTip.mOnClickListener);
-            }
+            // We wrap the tooltip's click listener in order to prevent overlay's click outside to cancel listener.
+            mToolTipViewGroup.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (mToolTip.mOnClickListener != null)
+                        mToolTip.mOnClickListener.onClick(v);
+                }
+            });
 
             // TODO: no boundary check for height yet, this is a unlikely case though
             // height boundary can be fixed by user changing the gravity to the other size, since there are plenty of space vertically compared to
             // horizontally
 
-            // this needs an viewTreeObserver, that's because TextView measurement of it's vertical height is not accurate (didn't take into
-            // account of multiple lines yet) before it's rendered
-            // re-calculate height again once it's rendered
-            mToolTipViewGroup.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-                @Override
-                public void onGlobalLayout() {
-                    // make sure this only run once
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
-                        //noinspection deprecation
-                        mToolTipViewGroup.getViewTreeObserver().removeGlobalOnLayoutListener(this);
-                    } else {
-                        mToolTipViewGroup.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                    }
+            if (mIsPopupWindow && mToolTipViewGroup != null) {
 
-                    int fixedY;
-                    int toolTipHeightAfterLayouted = mToolTipViewGroup.getHeight();
-                    fixedY = getYForTooTip(mToolTip.mGravity, toolTipHeightAfterLayouted, targetViewY, adjustment);
-                    layoutParams.setMargins((int) mToolTipViewGroup.getX(), fixedY, 0, 0);
-                    mToolTipViewGroup.setLayoutParams(layoutParams);
-                }
-            });
+                // // To fix the issue ListPopupWindow tool tip does not position correctly..
+                getPopupWindowOverlayLayout().getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+
+                    int[] mLastPos = new int[]{0, 0};
+
+                    @Override
+                    public void onGlobalLayout() {
+                        if (mToolTipViewGroup == null) {
+                            removeOnGlobalLayoutListener(mPopupWindowOverlayLayout, this);
+                            return;
+                        }
+                        int[] pos = getHighlightedViewPos();
+
+                        if (pos[0] != mLastPos[0] || pos[1] != mLastPos[1]) {
+                            mLastPos = pos;
+                            ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) mToolTipViewGroup.getLayoutParams();
+                            int y = getYForTooTip(mToolTip.mGravity, mToolTipViewGroup.getHeight(), pos[1], adjustment);
+                            int x = getXForTooTip(mToolTip.mGravity, mToolTipViewGroup.getWidth(), pos[0], adjustment);
+                            lp.setMargins(x, y, 0, 0);
+                            mToolTipViewGroup.setLayoutParams(lp);
+                        }
+                    }
+                });
+            }
+
+
+            /* Legacy */
+            // this needs an viewTreeObserver, that's because TextView measurement of it's vertical height is not accurate (didn't take into
+            // account of multiple lines yet) before it's rendered.
+            // re-calculate height again once it's rendered
+            // mToolTipViewGroup.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            //     @Override
+            //     public void onGlobalLayout() {
+            //         // make sure this only run once
+            //         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
+            //             //noinspection deprecation
+            //             mToolTipViewGroup.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+            //         } else {
+            //             mToolTipViewGroup.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+            //         }
+            //
+            //         int fixedY;
+            //         int toolTipHeightAfterLayouted = mToolTipViewGroup.getHeight();
+            //         fixedY = getYForTooTip(mToolTip.mGravity, toolTipHeightAfterLayouted, targetViewY, adjustment);
+            //         layoutParams.setMargins((int) mToolTipViewGroup.getX(), fixedY, 0, 0);
+            //         mToolTipViewGroup.setLayoutParams(layoutParams);
+            //     }
+            // });
 
             // set the position using setMargins on the left and top
             layoutParams.setMargins(resultPoint.x, resultPoint.y, 0, 0);
@@ -579,7 +676,7 @@ public class TourGuide {
     private ViewGroup getPopupWindowOverlayLayout() {
         if (mPopupWindowOverlayLayout == null) {
             mPopupWindowOverlayLayout = new FrameLayout(mActivity);
-            addToWindowManager(getPopupWindowOverlayLayout());
+            addToWindowManager(mPopupWindowOverlayLayout);
         }
         return mPopupWindowOverlayLayout;
     }
@@ -590,38 +687,71 @@ public class TourGuide {
             WindowManager.LayoutParams.MATCH_PARENT);
         lp.packageName = mActivity.getPackageName();
         lp.format = PixelFormat.TRANSLUCENT;
-        lp.type = WindowManager.LayoutParams.TYPE_APPLICATION_PANEL;
+        lp.type = WindowManager.LayoutParams.TYPE_APPLICATION_SUB_PANEL;
         lp.flags = WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM;
         wm.addView(v, lp);
     }
 
     private int getXForTooTip(int gravity, int toolTipMeasuredWidth, int targetViewX, float adjustment) {
-        int x;
-        if ((gravity & Gravity.LEFT) == Gravity.LEFT) {
-            x = targetViewX - toolTipMeasuredWidth + (int) adjustment;
-        } else if ((gravity & Gravity.RIGHT) == Gravity.RIGHT) {
-            x = targetViewX + mHighlightedView.getWidth() - (int) adjustment;
-        } else {
-            x = targetViewX + mHighlightedView.getWidth() / 2 - toolTipMeasuredWidth / 2;
+        int x = 0;
+
+        switch (mTarget) {
+            case WINDOW:
+                if ((gravity & Gravity.START) == Gravity.START) {
+                    x = 0;
+                } else if ((gravity & Gravity.END) == Gravity.END) {
+                    x = getScreenWidth() - toolTipMeasuredWidth - (int) adjustment;
+                } else {
+                    x = getScreenWidth() / 2 - toolTipMeasuredWidth / 2 - (int) adjustment;
+                }
+                break;
+            case VIEW:
+                if ((gravity & Gravity.START) == Gravity.START) {
+                    x = targetViewX - toolTipMeasuredWidth + (int) adjustment;
+                } else if ((gravity & Gravity.END) == Gravity.END) {
+                    x = targetViewX + mHighlightedView.getWidth() - (int) adjustment;
+                } else {
+                    x = targetViewX + mHighlightedView.getWidth() / 2 - toolTipMeasuredWidth / 2;
+                }
+                break;
         }
+
         return x;
     }
 
     private int getYForTooTip(int gravity, int toolTipMeasuredHeight, int targetViewY, float adjustment) {
-        int y;
-        if ((gravity & Gravity.TOP) == Gravity.TOP) {
+        int y = 0;
 
-            if (((gravity & Gravity.LEFT) == Gravity.LEFT) || ((gravity & Gravity.RIGHT) == Gravity.RIGHT)) {
-                y = targetViewY - toolTipMeasuredHeight + (int) adjustment;
-            } else {
-                y = targetViewY - toolTipMeasuredHeight - (int) adjustment;
-            }
-        } else { // this is center
-            if (((gravity & Gravity.LEFT) == Gravity.LEFT) || ((gravity & Gravity.RIGHT) == Gravity.RIGHT)) {
-                y = targetViewY + mHighlightedView.getHeight() - (int) adjustment;
-            } else {
-                y = targetViewY + mHighlightedView.getHeight() + (int) adjustment;
-            }
+        switch (mTarget) {
+            case WINDOW:
+                switch (gravity) {
+                    case Gravity.TOP:
+                        y = 0;
+                        break;
+                    case Gravity.CENTER:
+                        y = getScreenHeight() / 2 - toolTipMeasuredHeight / 2 - (int) adjustment;
+                        break;
+                    case Gravity.BOTTOM:
+                        y = getScreenHeight() - toolTipMeasuredHeight - (int) adjustment;
+                        break;
+                }
+                break;
+            case VIEW:
+                if ((gravity & Gravity.TOP) == Gravity.TOP) {
+
+                    if (((gravity & Gravity.LEFT) == Gravity.LEFT) || ((gravity & Gravity.RIGHT) == Gravity.RIGHT)) {
+                        y = targetViewY - toolTipMeasuredHeight + (int) adjustment;
+                    } else {
+                        y = targetViewY - toolTipMeasuredHeight - (int) adjustment;
+                    }
+                } else { // this is center
+                    if (((gravity & Gravity.LEFT) == Gravity.LEFT) || ((gravity & Gravity.RIGHT) == Gravity.RIGHT)) {
+                        y = targetViewY + mHighlightedView.getHeight() - (int) adjustment;
+                    } else {
+                        y = targetViewY + mHighlightedView.getHeight() + (int) adjustment;
+                    }
+                }
+                break;
         }
         return y;
     }
@@ -656,10 +786,35 @@ public class TourGuide {
                 final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
 
+                final int[] pos = getHighlightedViewPos();
+
                 // measure size of image to be placed
-                params.setMargins(getXBasedOnGravity(invisFab.getWidth()), getYBasedOnGravity(invisFab.getHeight()), 0, 0);
+                params.setMargins(getXBasedOnGravity(invisFab.getWidth(), pos), getYBasedOnGravity(invisFab.getHeight(), pos), 0, 0);
 
                 frameLayoutWithHole.addView(fab, params);
+
+                // To fix the issue ListPopupWindow tool tip does not position correctly..
+                if (mIsPopupWindow && mHighlightedView != null && mFrameLayout != null) {
+                    getPopupWindowOverlayLayout().getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                        int[] mLastPos = new int[]{0, 0};
+
+                        @Override
+                        public void onGlobalLayout() {
+                            if (mFrameLayout == null) {
+                                removeOnGlobalLayoutListener(mPopupWindowOverlayLayout, this);
+                                return;
+                            }
+                            final int[] pos = getHighlightedViewPos();
+
+                            if (pos[0] != mLastPos[0] || pos[1] != mLastPos[1]) {
+                                mLastPos = pos;
+                                final ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) fab.getLayoutParams();
+                                lp.setMargins(getXBasedOnGravity(fab.getWidth(), pos), getYBasedOnGravity(fab.getHeight(), pos), 0, 0);
+                                fab.setLayoutParams(lp);
+                            }
+                        }
+                    });
+                }
             }
         });
 
@@ -894,6 +1049,14 @@ public class TourGuide {
         }
     }
 
+    private int getScreenHeight() {
+        if (mActivity != null) {
+            return mActivity.getResources().getDisplayMetrics().heightPixels;
+        } else {
+            return 0;
+        }
+    }
+
     private View getDecoView() {
         return getWindow().getDecorView();
     }
@@ -918,6 +1081,16 @@ public class TourGuide {
      */
     public enum MotionType {
         ALLOW_ALL, CLICK_ONLY, SWIPE_ONLY
+    }
+
+    private void removeOnGlobalLayoutListener(@Nullable View v, ViewTreeObserver.OnGlobalLayoutListener listener) {
+        if (v == null)
+            return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            v.getViewTreeObserver().removeOnGlobalLayoutListener(listener);
+        } else {
+            v.getViewTreeObserver().removeGlobalOnLayoutListener(listener);
+        }
     }
 
 }

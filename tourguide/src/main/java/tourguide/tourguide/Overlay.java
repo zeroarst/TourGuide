@@ -1,5 +1,6 @@
 package tourguide.tourguide;
 
+import android.app.Activity;
 import android.graphics.Color;
 import android.view.View;
 import android.view.animation.Animation;
@@ -9,25 +10,31 @@ import android.view.animation.Animation;
  * the targeted element.
  */
 public class Overlay {
-    public int mBackgroundColor;
-    public boolean mDisableClickThrough;
-    public boolean mDisableInteractWithTarget;
-    public boolean mClickOutsideTargetToCancel;
-    public Style mStyle;
-    public Animation mEnterAnimation, mExitAnimation;
-    public int mHoleOffsetLeft = 0;
-    public int mHoleOffsetTop = 0;
+    protected int mBackgroundColor;
+    protected boolean mDisableClickThrough;
+    protected boolean mDisableInteractWithTarget;
+    protected boolean mClickOutsideTargetToCancel;
+    protected Style mStyle;
+    protected Animation mEnterAnimation, mExitAnimation;
+    protected int mHoleOffsetLeft = 0;
+    protected int mHoleOffsetTop = 0;
 
-    public View.OnClickListener mOnClickOutsideTargetListener;
+    protected View.OnClickListener mOnClickOutsideTargetListener;
 
-    public View.OnClickListener mOnClickTargetListener;
-    public View.OnLongClickListener mOnLongClickTargetListener;
-    public View.OnTouchListener mOnTouchTargetListener;
+    protected View.OnClickListener mOnClickTargetListener;
+    protected View.OnLongClickListener mOnLongClickTargetListener;
+    protected View.OnTouchListener mOnTouchTargetListener;
 
-    public int mHoleRadius = NOT_SET;
-    public final static int NOT_SET = -1;
-    public int mPaddingDp = 10;
-    public int mRoundedCornerRadiusDp = 0;
+        protected OnClickOutSideTargetCancelListener mOnClickOutsideCancelListener;
+
+    protected int mHoleRadius = NOT_SET;
+    protected final static int NOT_SET = -1;
+    protected int mPaddingDp = 10;
+    protected int mRoundedCornerRadiusDp = 0;
+
+    public interface OnClickOutSideTargetCancelListener {
+        void onCancel(Activity activity, TourGuide tourGuide);
+    }
 
     public enum Style {
         CIRCLE, RECTANGLE, ROUNDED_RECTANGLE, NO_HOLE
@@ -60,7 +67,7 @@ public class Overlay {
      * @param yesNo
      * @return return {@link Overlay} instance for chaining purpose
      */
-    public Overlay disableClickThrough(boolean yesNo) {
+    final public Overlay disableClickThrough(boolean yesNo) {
         mDisableClickThrough = yesNo;
         return this;
     }

@@ -93,28 +93,33 @@ public class FrameLayoutWithHole extends FrameLayout {
         enforceMotionType();
         mOverlay = overlay;
 
-        int[] pos = new int[2];
-        mViewHole.getLocationOnScreen(pos);
-        mPos = pos;
-
         mDensity = context.getResources().getDisplayMetrics().density;
         int padding = (int) (20 * mDensity);
 
-        if (mViewHole.getHeight() > mViewHole.getWidth()) {
-            mRadius = mViewHole.getHeight() / 2 + padding;
-        } else {
-            mRadius = mViewHole.getWidth() / 2 + padding;
-        }
         mMotionType = motionType;
 
-        // Init a RectF to be used in OnDraw for a ROUNDED_RECTANGLE Style Overlay
-        if (mOverlay != null && mOverlay.mStyle == Overlay.Style.ROUNDED_RECTANGLE) {
-            int recfFPaddingPx = (int) (mOverlay.mPaddingDp * mDensity);
-            mRectF = new RectF(mPos[0] - recfFPaddingPx + mOverlay.mHoleOffsetLeft,
-                mPos[1] - recfFPaddingPx + mOverlay.mHoleOffsetTop,
-                mPos[0] + mViewHole.getWidth() + recfFPaddingPx + mOverlay.mHoleOffsetLeft,
-                mPos[1] + mViewHole.getHeight() + recfFPaddingPx + mOverlay.mHoleOffsetTop);
+        if (mViewHole != null) {
+            int[] pos = new int[2];
+            mViewHole.getLocationOnScreen(pos);
+            mPos = pos;
+
+            if (mViewHole.getHeight() > mViewHole.getWidth()) {
+                mRadius = mViewHole.getHeight() / 2 + padding;
+            } else {
+                mRadius = mViewHole.getWidth() / 2 + padding;
+            }
+
+            // Init a RectF to be used in OnDraw for a ROUNDED_RECTANGLE Style Overlay
+            if (mOverlay != null && mOverlay.mStyle == Overlay.Style.ROUNDED_RECTANGLE) {
+                int recfFPaddingPx = (int) (mOverlay.mPaddingDp * mDensity);
+                mRectF = new RectF(mPos[0] - recfFPaddingPx + mOverlay.mHoleOffsetLeft,
+                    mPos[1] - recfFPaddingPx + mOverlay.mHoleOffsetTop,
+                    mPos[0] + mViewHole.getWidth() + recfFPaddingPx + mOverlay.mHoleOffsetLeft,
+                    mPos[1] + mViewHole.getHeight() + recfFPaddingPx + mOverlay.mHoleOffsetTop);
+            }
         }
+
+
     }
 
     private void init(AttributeSet attrs, int defStyle) {
@@ -238,7 +243,7 @@ public class FrameLayoutWithHole extends FrameLayout {
         //first check if the location button should handle the touch event
         //        dumpEvent(ev);
         //        int action = MotionEventCompat.getActionMasked(ev);
-        if (mViewHole != null) {
+        // if (mViewHole != null) {
 
             //            Log.d("tourguide", "[dispatchTouchEvent] mViewHole.getHeight(): "+mViewHole.getHeight());
             //            Log.d("tourguide", "[dispatchTouchEvent] mViewHole.getWidth(): "+mViewHole.getWidth());
@@ -271,7 +276,7 @@ public class FrameLayoutWithHole extends FrameLayout {
             }
 
             // let it pass through
-            return false;
+            // return false;
 
 
             // if (isWithinButton(ev)) {
@@ -297,12 +302,16 @@ public class FrameLayoutWithHole extends FrameLayout {
             //     // let it pass through
             //     return false;
             // }
-        }
+        // }
         // do nothing, just propagating up to super
         return super.dispatchTouchEvent(ev);
     }
 
     protected boolean isWithinTargetBoundary(MotionEvent ev) {
+
+        if (mViewHole == null)
+            return false;
+
         int[] pos = new int[2];
         mViewHole.getLocationOnScreen(pos);
         RectF rect = new RectF(pos[0], pos[1], pos[0] + mViewHole.getWidth(), pos[1] + mViewHole.getHeight());
@@ -323,33 +332,36 @@ public class FrameLayoutWithHole extends FrameLayout {
             int padding = (int) (mOverlay.mPaddingDp * mDensity);
             Log.i("TOURGUIDE", String.format("**********PADDING: %s**********", padding));
 
-            if (mOverlay.mStyle == Overlay.Style.RECTANGLE) {
-                Log.d("_bbb", "onDraw: " + String.valueOf(mPos[1]));
+            if (mViewHole != null) {
 
-                mEraserCanvas.drawRect(
-                    mPos[0] - padding + mOverlay.mHoleOffsetLeft,
-                    mPos[1] - padding + mOverlay.mHoleOffsetTop,
-                    mPos[0] + mViewHole.getWidth() + padding + mOverlay.mHoleOffsetLeft,
-                    mPos[1] + mViewHole.getHeight() + padding + mOverlay.mHoleOffsetTop, mEraser);
-            } else if (mOverlay.mStyle == Overlay.Style.NO_HOLE) {
-                mEraserCanvas.drawCircle(
-                    mPos[0] + mViewHole.getWidth() / 2 + mOverlay.mHoleOffsetLeft,
-                    mPos[1] + mViewHole.getHeight() / 2 + mOverlay.mHoleOffsetTop,
-                    0, mEraser);
-            } else if (mOverlay.mStyle == Overlay.Style.ROUNDED_RECTANGLE) {
-                int roundedCornerRadiusPx;
-                if (mOverlay.mRoundedCornerRadiusDp != 0) {
-                    roundedCornerRadiusPx = (int) (mOverlay.mRoundedCornerRadiusDp * mDensity);
+                if (mOverlay.mStyle == Overlay.Style.RECTANGLE) {
+                    Log.d("_bbb", "onDraw: " + String.valueOf(mPos[1]));
+
+                    mEraserCanvas.drawRect(
+                        mPos[0] - padding + mOverlay.mHoleOffsetLeft,
+                        mPos[1] - padding + mOverlay.mHoleOffsetTop,
+                        mPos[0] + mViewHole.getWidth() + padding + mOverlay.mHoleOffsetLeft,
+                        mPos[1] + mViewHole.getHeight() + padding + mOverlay.mHoleOffsetTop, mEraser);
+                } else if (mOverlay.mStyle == Overlay.Style.NO_HOLE) {
+                    mEraserCanvas.drawCircle(
+                        mPos[0] + mViewHole.getWidth() / 2 + mOverlay.mHoleOffsetLeft,
+                        mPos[1] + mViewHole.getHeight() / 2 + mOverlay.mHoleOffsetTop,
+                        0, mEraser);
+                } else if (mOverlay.mStyle == Overlay.Style.ROUNDED_RECTANGLE) {
+                    int roundedCornerRadiusPx;
+                    if (mOverlay.mRoundedCornerRadiusDp != 0) {
+                        roundedCornerRadiusPx = (int) (mOverlay.mRoundedCornerRadiusDp * mDensity);
+                    } else {
+                        roundedCornerRadiusPx = (int) (10 * mDensity);
+                    }
+                    mEraserCanvas.drawRoundRect(mRectF, roundedCornerRadiusPx, roundedCornerRadiusPx, mEraser);
                 } else {
-                    roundedCornerRadiusPx = (int) (10 * mDensity);
+                    int holeRadius = mOverlay.mHoleRadius != Overlay.NOT_SET ? mOverlay.mHoleRadius : mRadius;
+                    mEraserCanvas.drawCircle(
+                        mPos[0] + mViewHole.getWidth() / 2 + mOverlay.mHoleOffsetLeft,
+                        mPos[1] + mViewHole.getHeight() / 2 + mOverlay.mHoleOffsetTop,
+                        holeRadius, mEraser);
                 }
-                mEraserCanvas.drawRoundRect(mRectF, roundedCornerRadiusPx, roundedCornerRadiusPx, mEraser);
-            } else {
-                int holeRadius = mOverlay.mHoleRadius != Overlay.NOT_SET ? mOverlay.mHoleRadius : mRadius;
-                mEraserCanvas.drawCircle(
-                    mPos[0] + mViewHole.getWidth() / 2 + mOverlay.mHoleOffsetLeft,
-                    mPos[1] + mViewHole.getHeight() / 2 + mOverlay.mHoleOffsetTop,
-                    holeRadius, mEraser);
             }
         }
         canvas.drawBitmap(mEraserBitmap, 0, 0, null);

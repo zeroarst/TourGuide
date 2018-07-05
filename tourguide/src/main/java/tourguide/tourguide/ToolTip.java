@@ -12,16 +12,17 @@ import android.view.animation.BounceInterpolator;
  * Created by tanjunrong on 6/17/15.
  */
 public class ToolTip {
-    public String mTitle, mDescription;
-    public int mBackgroundColor, mTitleColor, mDescriptionColor;
-    public int mTitleGravity, mDescriptionGravity;
-    public Animation mEnterAnimation, mExitAnimation;
-    public boolean mShadow;
-    public int mGravity;
-    public View.OnClickListener mOnClickListener;
-    public ViewGroup mCustomView;
-    public int mWidth;
-    public int mTooltipAndTargetViewOffset; // adjustment is that little overlapping area of tooltip and targeted view
+    protected CharSequence mTitle, mDescription;
+    protected int mBackgroundColor, mTitleColor, mDescriptionColor;
+    protected int mTitleGravity, mDescriptionGravity;
+    protected Animation mEnterAnimation, mExitAnimation;
+    protected boolean mShadow;
+    protected int mGravity;
+
+    View.OnClickListener mOnClickListener;
+    ViewGroup mCustomView;
+    int mWidth;
+    protected int mTooltipAndTargetViewOffset; // adjustment is that little overlapping area of tooltip and targeted view
 
 
     public ToolTip() {
@@ -41,10 +42,11 @@ public class ToolTip {
         mShadow = true;
         mWidth = -1;
 
+        mGravity = Gravity.CENTER;
+
         mTooltipAndTargetViewOffset = 10;
 
         // TODO: exit animation
-        mGravity = Gravity.CENTER;
     }
 
     /**
@@ -53,7 +55,7 @@ public class ToolTip {
      * @param title
      * @return return ToolTip instance for chaining purpose
      */
-    public ToolTip setTitle(String title) {
+    public ToolTip setTitle(CharSequence title) {
         mTitle = title;
         return this;
     }
@@ -64,7 +66,7 @@ public class ToolTip {
      * @param description
      * @return return ToolTip instance for chaining purpose
      */
-    public ToolTip setDescription(String description) {
+    public ToolTip setDescription(CharSequence description) {
         mDescription = description;
         return this;
     }
@@ -102,12 +104,14 @@ public class ToolTip {
         return this;
     }
 
-    public void setTitleGravity(int gravity) {
+    public ToolTip setTitleGravity(int gravity) {
         this.mTitleGravity = gravity;
+        return this;
     }
 
-    public void setDescriptionGravity(int gravity) {
+    public ToolTip setDescriptionGravity(int gravity) {
         this.mDescriptionGravity = gravity;
+        return this;
     }
 
     /**
