@@ -10,9 +10,6 @@ import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.os.Build;
-import android.support.annotation.Nullable;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.view.ViewCompat;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.Gravity;
@@ -28,6 +25,10 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import net.i2p.android.ext.floatingactionbutton.FloatingActionButton;
+
+import androidx.annotation.Nullable;
+import androidx.core.view.ViewCompat;
+import androidx.fragment.app.DialogFragment;
 
 /**
  * Created by tanjunrong on 2/10/15.
@@ -132,6 +133,7 @@ public class TourGuide {
 
     /**
      * Sets the TourGuide to be played on whole screen instead of a target view.
+     *
      * @return
      */
     public TourGuide play() {
